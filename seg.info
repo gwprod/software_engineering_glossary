@@ -1,0 +1,7 @@
+name = Software Engineering Glossary - Base
+description = "Base Module with utility functions"
+package = "Software Engineering Glossary"
+dependencies[] = date
+dependencies[] = date_popup
+core = 7.x
+version = VERSION

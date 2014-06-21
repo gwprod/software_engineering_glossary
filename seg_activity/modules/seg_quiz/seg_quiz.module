@@ -1,0 +1,325 @@
+<?php
+
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+function seg_quiz_seg_activity_info() {
+  $activity['quiz'] = array(
+    'title' => t('Multiple-Choice Quiz'),
+    'bundle' => 'quiz',
+    'module' => 'seg_quiz',
+    'form callback' => 'seg_quiz_seg_activity_form',
+    'submit callback' => 'seg_quiz_seg_activity_form_submit',
+    'formatter callback' => 'seg_quiz_seg_activity_formatter'
+  );
+  return $activity;
+}
+
+function seg_quiz_generate_quiz($quiz) {
+  $dictionaries = seg_dictionary_load_multiple(array_keys($quiz->data['quiz_options']['dictionary']));
+  $number_of_questions = $quiz->data['quiz_options']['length'];
+  $quiz_instance = array();
+  $quiz_instance['quiz'] = $quiz;
+  $quiz_instance['questions'] = array();
+  $used_terms = array();
+  $quiz_type = $quiz->data['quiz_options']['quiz_type'];
+  for ($i = 1; $i <= $number_of_questions; $i++) {
+    $terms = seg_term_dictionary_random_terms($dictionaries, $used_terms, 5);
+    $question_key = array_rand($terms);
+
+    switch ($quiz_type) {
+      case 'term':
+        $question_field = 'term';
+        $answer_field = 'description';
+        break;
+      case 'description':
+        $question_field = 'description';
+        $answer_field = 'term';
+        break;
+      case 'both':
+        $random = mt_rand(0, 9);
+        if ($random >= 5) {
+          $question_field = 'term';
+          $answer_field = 'description';
+        }
+        else {
+          $question_field = 'description';
+          $answer_field = 'term';
+        }
+        break;
+    }
+    if ($question_field == 'description' && ($quiz->data['quiz_options']['display_image'] || $quiz->data['quiz_options']['display_code'])) {
+      if ($quiz->data['quiz_options']['display_image'] && isset($terms[$question_key]->field_image[LANGUAGE_NONE])) {
+
+        $question = array(
+          'description' => t('Choose the term that most accurately reflects this image.'),
+          'title' => t('Image Clue'),
+          'value' => field_view_value('seg_term', $terms[$question_key], 'field_image', $terms[$question_key]->field_image[LANGUAGE_NONE][0])
+        );
+      }
+      elseif ($quiz->data['quiz_options']['display_code'] && isset($terms[$question_key]->field_code[LANGUAGE_NONE])) {
+        //print_r($terms[$question_key]->field_code);
+        $question = array(
+          'title' => t('Code Clue'),
+          'value' => field_view_value('seg_term', $terms[$question_key], 'field_code', $terms[$question_key]->field_code[LANGUAGE_NONE][0]),
+          'description' => t('Choose the term that most accurately reflects this code snippet.')
+        );
+      }
+      else {
+        $question = array(
+          'title' => t('Clue'),
+          'markup' => '<br/>' . $terms[$question_key]->$question_field
+        );
+      }
+    }
+    else {
+      $question = array(
+        'title' => t('Clue'),
+        'markup' => '<br/>' . $terms[$question_key]->$question_field
+      );
+    }
+    $options = array();
+    foreach ($terms as $term) {
+      $options[$term->term_id] = $term->$answer_field;
+    }
+    $quiz_instance['questions'][$i] = array(
+      'clue' => $question,
+      'answers' => $options,
+      'correct_answer' => $question_key
+    );
+    $used_terms[] = $question_key;
+  }
+  return $quiz_instance;
+}
+
+function seg_quiz_seg_activity_formatter($activity) {
+  return drupal_get_form('seg_quiz_quiz_form', $activity);
+}
+
+function seg_quiz_quiz_form_submit($form, &$form_state) {
+  // First we determine which step we are on, and save the
+  // submitted values to $form_state['storage']. This will
+  // allow our submitted values to persist.
+  $step = $form_state['step'];
+  //watchdog('submit', print_r($form_state['values'], TRUE));
+  if (isset($form_state['values']['submission_id'])) {
+    $submission = seg_activity_submission_load($form_state['values']['submission_id']);
+    //watchdog('submission', print_r($submission, TRUE));
+  }
+  $quiz = seg_activity_load($form_state['values']['quiz_id']);
+  $form_state['storage']['step_' . $step] = $form_state['values']['step_' . $step];
+  if ($step > 0 && $form_state['values']['step_' . $step]['answer'] == $form_state['values']['step_' . $step]['correct_answer']) {
+    $form_state['storage']['score'] += $quiz->score / $quiz->data['quiz_options']['length'];
+  }
+  //watchdog('seg_quiz_quiz_form_submit', print_r($form_state['values']['step_' . $step], TRUE));
+  // check to see if the start quiz button was clicked.
+  if (isset($form_state['values']['start']) && $form_state['values']['op'] == $form_state['values']['start']) {
+
+    $form_state['step'] ++;
+  }
+  // Check to see if the next/forward button was clicked
+  if (isset($form_state['values']['forward']) && $form_state['values']['op'] == $form_state['values']['forward']) {
+    // Increase the step by one, to move on to the next step
+    $form_state['step'] ++;
+    $submission->data['step'] = $form_state['step'];
+    $submission->data['storage'] = $form_state['storage'];
+    entity_save('seg_activity_submission', $submission);
+  }
+// Check to see if the final step has been submitted
+  elseif (isset($form_state['values']['submit']) && $form_state['values']['op'] == $form_state['values']['submit']) {
+    // Here we will collect the data and show the submitted values to the user in a message.
+    // In a real-world application of this form, you would use the submitted values to complete the
+    // purpose of the form - save them to the database and/or send an email and/or display something
+    // to the user etc. The following is just s simple example to show how the values can be used.
+    //$items = array($form_state['storage']['step_1'], $form_state['storage']['step_2'], $form_state['storage']['step_3']);
+    //drupal_set_message(t('You submitted the following values:!values', array('!values' => theme('item_list', array('items' => $items)))));
+    // The form has been completed, so we want to return the user to step 1
+    // as well as clear any saved values.
+    $submission->data['storage'] = $form_state['storage'];
+    $submission->score = $form_state['storage']['score'];
+    $submission->status = 1;
+    entity_save('seg_activity_submission', $submission);
+    $form_state['step'] = 0;
+    $form_state['storage'] = array();
+  }
+
+// As in ajax_form_multistep_form_back_submit(), we need to set
+// $form_state['rebuild'] to TRUE, in able to ensure that our
+// our form is rebuilt, allowing for the multi-step process
+  //watchdog('seg_quiz_quiz_form_submit', print_r($form_state, TRUE));
+  $form_state['rebuild'] = TRUE;
+}
+
+function seg_quiz_quiz_form($form, &$form_state, $quiz) {
+  global $user;
+  $question = 1;
+  $form_state['step'] = isset($form_state['step']) ? $form_state['step'] : 0;
+  $form['#prefix'] = '<div id="quiz_question">';
+  $form['#suffix'] = '</div>';
+  $form['quiz_id'] = array(
+    '#type' => 'hidden',
+    '#value' => $quiz->activity_id
+  );
+  $previous_submissions = seg_activity_submission_get_submissions($quiz, $user);
+
+  if ($form_state['step'] == 0) {
+    $form['previous_submissions'] = array(
+      '#markup' => drupal_render(seg_activity_submission_list_submissions($quiz, $previous_submissions))
+    );
+    if (count($previous_submissions) > 0 && $quiz->data['quiz_options']['repeatable'] == false) {
+      drupal_set_message('This activity is not repeatable.  You have already done this activity.');
+    }
+    else {
+      $form['start'] = array(
+        '#type' => 'submit',
+        '#value' => t('Start the quiz'),
+        '#ajax' => array
+          (
+          // We pass in the wrapper we created at the start of the form
+          'wrapper' => 'quiz_question',
+          // We pass a callback function we will use later to render the form for the user
+          'callback' => 'seg_quiz_quiz_form_ajax_callback',
+        ),
+      );
+    }
+  }
+  else {
+
+    if (!isset($form_state['values']['submission_id'])) {
+      $submission = seg_activity_submission_create($quiz, array(
+        'step' => 1
+      ));
+    }
+    else {
+      $submission = seg_activity_submission_load($form_state['values']['submission_id']);
+    }
+
+    $form['submission_id'] = array(
+      '#type' => 'hidden',
+      '#value' => $submission->submission_id
+    );
+    if (!isset($form_state['quiz_instance'])) {
+      $quiz_instance = seg_quiz_generate_quiz($quiz);
+      watchdog('quiz_instance', print_r($quiz_instance, TRUE));
+      $form_state['quiz_instance'] = $quiz_instance;
+    }
+    else {
+      $quiz_instance = $form_state['quiz_instance'];
+    }
+    $question_instance = $quiz_instance['questions'][$form_state['step']];
+
+    //$form['#submit'] = 'seg_quiz_quiz_form_submit';
+
+
+    $form['step_' . $form_state['step']] = array(
+      '#tree' => TRUE
+    );
+    $form['step_' . $form_state['step']]['message'] = array(
+      '#type' => 'item',
+      '#markup' => t($quiz->title . ': Question @question of @total_questions.  @score/@max_score', array('@question' => $form_state['step'], '@total_questions' => $quiz->data['quiz_options']['length'], '@score' => isset($form_state['storage']['score']) ? $form_state['storage']['score'] : 0, '@max_score' => $quiz->score))
+    );
+    $form['step_' . $form_state['step']]['question'] = array(
+      '#type' => 'item',
+      '#title' => $question_instance['clue']['title'],
+      '#title_display' => 'before',
+      '#markup' => isset($question_instance['clue']['value']) ? drupal_render($question_instance['clue']['value']) : $question_instance['clue']['markup']
+    );
+
+
+    $form['step_' . $form_state['step']]['answer'] = array(
+      '#type' => 'radios',
+      '#title' => t('Answers'),
+      '#options' => $question_instance['answers'],
+    );
+    $form['step_' . $form_state['step']]['correct_answer'] = array(
+      '#type' => 'hidden',
+      '#value' => $question_instance['correct_answer'],
+    );
+    if ($quiz->data['quiz_options']['length'] > $form_state['step']) {
+      $form['forward'] = array(
+        '#type' => 'submit',
+        '#value' => t('Next Question'),
+        '#ajax' => array
+          (
+          // We pass in the wrapper we created at the start of the form
+          'wrapper' => 'quiz_question',
+          // We pass a callback function we will use later to render the form for the user
+          'callback' => 'seg_quiz_quiz_form_ajax_callback',
+        ),
+      );
+    }
+    else {
+      $form['submit'] = array(
+        '#type' => 'submit',
+        '#value' => t('Submit'),
+        '#ajax' => array
+          (
+          // We pass in the wrapper we created at the start of the form
+          'wrapper' => 'quiz_question',
+          // We pass a callback function we will use later to render the form for the user
+          'callback' => 'seg_quiz_quiz_form_ajax_callback',
+        ),
+      );
+    }
+  }
+
+  return $form;
+}
+
+function seg_quiz_quiz_form_ajax_callback($form, &$form_state) {
+  return $form;
+}
+
+function seg_quiz_seg_activity_form($form, &$form_state, $class, $activity = null) {
+
+  $form['quiz_options'] = array(
+    '#tree' => TRUE,
+    '#type' => 'fieldset',
+    '#title' => t('Quiz Options')
+  );
+  $form['quiz_options']['quiz_type'] = array(
+    '#type' => 'select',
+    '#options' => array(
+      'term' => t('Term Clue - Description Answer'),
+      'description' => t('Description Clue - Term Answer'),
+      'both' => t('Both')
+    ),
+    '#description' => t('The type of multiple-choice questions to ask.'),
+    '#default_value' => isset($activity) ? $activity->data['quiz_options']['quiz_type'] : array()
+  );
+  $form['quiz_options']['display_image'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Display Image in place of Description Clue, when available?'),
+    '#default_value' => isset($activity->data['quiz_options']['display_image']) ? $activity->data['quiz_options']['display_image'] : 0
+  );
+  $form['quiz_options']['display_code'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Display Code Snippet in place of Description Clue, when available?'),
+    '#default_value' => isset($activity->data['quiz_options']['display_code']) ? $activity->data['quiz_options']['display_code'] : 0
+  );
+
+
+  $form['quiz_options']['length'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Number of questions.'),
+    '#description' => t('The number of questions on this multiple-choice quiz.  Total points will be divided among the questions.'),
+    '#default_value' => isset($activity->data['quiz_options']['length']) ? $activity->data['quiz_options']['length'] : 10
+  );
+  $form['quiz_options']['dictionary'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Dictionaries to use.'),
+    '#description' => t('The dictionaries to use for this quiz.'),
+    '#options' => seg_dictionary_get_dictionaries(),
+    '#default_value' => isset($activity->data['quiz_options']['dictionary']) ? $activity->data['quiz_options']['dictionary'] : array()
+  );
+  $form['quiz_options']['repeatable'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Can the user do this activity multiple times?'),
+    '#default_value' => isset($activity->data['quiz_options']['repeatable']) ? $activity->data['quiz_options']['repeatable'] : 0
+  );
+  return $form;
+}
+
+?>

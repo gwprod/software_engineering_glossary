@@ -1,0 +1,8 @@
+name = Software Engineering Glossary - Class
+description = "Class"
+package = "Software Engineering Glossary"
+dependencies[] = seg
+dependencies[] = date
+dependencies[] = date_popup
+core = 7.x
+version = VERSION

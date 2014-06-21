@@ -1,0 +1,327 @@
+<?php
+
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+function seg_activity_schema() {
+  $schema['seg_activity'] = array(
+    'description' => 'Base table for SEG Activity',
+    'fields' => array(
+      'activity_id' => array(
+        'description' => "The activity unique ID.",
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'revision_id' => array(
+        'description' => "The activity revision ID.",
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'class_id' => array(
+        'description' => "The class this activity is a part of",
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'title' => array(
+        'description' => "The name of this activity",
+        'type' => 'varchar',
+        'length' => 100,
+        'not null' => TRUE,
+        'default' => ''
+      ),
+      'description' => array(
+        'description' => "The description (if any) of this activity",
+        'type' => 'text'
+      ),
+      'type' => array(
+        'description' => "The bundle type",
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => 'seg_activity'
+      ),
+      'data' => array(
+        'description' => "data associated with this activity",
+        'type' => 'text',
+        'serialize' => TRUE
+      ),
+      'state' => array(
+        'description' => "State of the entity, 0 for deleted, 1 for active",
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 1
+      ),
+      'created' => array(
+        'description' => 'When this entity was created',
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0
+      ), 'changed' => array(
+        'description' => 'When this entity was changed',
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0
+      ),
+      'score' => array(
+        'description' => 'Total points this activity is worth',
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0
+      ),
+      'due_date' => array(
+        'description' => 'Date this activity must be completed by',
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0
+      )
+    ), 'primary key' => array('activity_id'),
+    'indexes' => array(
+      // Entity index; When searching for an entity, we use both the id and type.
+      'revision' => array('revision_id'),
+    ),
+  );
+  $schema['seg_activity_revision'] = array(
+    'description' => 'Revision table for SEG Activity',
+    'fields' => array(
+      'activity_id' => array(
+        'description' => "The activity unique ID.",
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'revision_id' => array(
+        'description' => "The activity revision ID.",
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'class_id' => array(
+        'description' => "The class this activity is a part of",
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'title' => array(
+        'description' => "The name of this activity",
+        'type' => 'varchar',
+        'length' => 100,
+        'not null' => TRUE,
+        'default' => ''
+      ),
+      'description' => array(
+        'description' => "The description (if any) of this activity",
+        'type' => 'text'
+      ),
+      'type' => array(
+        'description' => "The bundle type",
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => 'seg_activity'
+        
+      ),
+      'data' => array(
+        'description' => "data associated with this activity",
+        'type' => 'text',
+        'serialize' => TRUE
+      ),
+      'state' => array(
+        'description' => "State of the entity, 0 for deleted, 1 for active",
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 1
+      ),
+      'created' => array(
+        'description' => 'When this entity was created',
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0
+      ), 'changed' => array(
+        'description' => 'When this entity was changed',
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0
+      ),
+      'score' => array(
+        'description' => 'Total points this activity is worth',
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0
+      ),
+      'due_date' => array(
+        'description' => 'Date this activity must be completed by',
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0
+      )
+    ),
+    'primary key' => array('revision_id'),
+    'indexes' => array(
+      // Entity index; When searching for an entity, we use both the id and type.
+      'activity' => array('activity_id'),
+    ),
+  );
+  $schema['seg_activity_submission'] = array(
+    'fields' => array(
+      'submission_id' => array(
+        'description' => "The submission unique ID.",
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        
+      ),
+      'uid' => array(
+        'description' => "The user who submitted.",
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'activity_id' => array(
+        'description' => "The activity ID",
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      
+      'data' => array(
+        'description' => "data associated with this submission",
+        'type' => 'text',
+        'serialize' => TRUE
+      ),
+      'state' => array(
+        'description' => "State of the submission, 0 for deleted, 1 for active",
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 1
+      ),
+      'created' => array(
+        'description' => 'When this entity was created',
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0
+      ), 'changed' => array(
+        'description' => 'When this entity was changed',
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0
+      ),
+      'score' => array(
+        'description' => 'Points earned in this submission.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0
+      ),
+      'status' => array(
+        'description' => 'The status of the submission, 0 for in progress, 1 for complete',
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0
+      ),
+      'type' => array(
+        'description' => "The bundle type",
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => 'seg_activity_submission'
+      )
+      
+    ),
+    'primary key' => array('submission_id'),
+    'indexes' => array(
+      // Entity index; When searching for an entity, we use both the id and type.
+      'activity' => array('activity_id'),
+    ),
+    );
+  return $schema;
+}
+function seg_activity_update_7100() {
+    $spec = seg_activity_schema();
+    foreach ($spec as $table_key => $table_info) {
+        if (db_table_exists($table_key)) {
+            foreach ($table_info['fields'] as $field_key => $field) {
+                if (!db_field_exists($table_key, $field_key)) {
+                    db_add_field($table_key, $field_key, $field);
+                } else {
+                    db_change_field($table_key, $field_key, $field_key, $field);
+                }
+            }
+        } else {
+            db_create_table($table_key, $table_info);
+        }
+    }
+}
+function seg_activity_update_7101() {
+    $spec = seg_activity_schema();
+    foreach ($spec as $table_key => $table_info) {
+        if (db_table_exists($table_key)) {
+            foreach ($table_info['fields'] as $field_key => $field) {
+                if (!db_field_exists($table_key, $field_key)) {
+                    db_add_field($table_key, $field_key, $field);
+                } else {
+                    db_change_field($table_key, $field_key, $field_key, $field);
+                }
+            }
+        } else {
+            db_create_table($table_key, $table_info);
+        }
+    }
+}
+function seg_activity_update_7102() {
+    $spec = seg_activity_schema();
+    foreach ($spec as $table_key => $table_info) {
+        if (db_table_exists($table_key)) {
+            foreach ($table_info['fields'] as $field_key => $field) {
+                if (!db_field_exists($table_key, $field_key)) {
+                    db_add_field($table_key, $field_key, $field);
+                } else {
+                    db_change_field($table_key, $field_key, $field_key, $field);
+                }
+            }
+        } else {
+            db_create_table($table_key, $table_info);
+        }
+    }
+}
+function seg_activity_update_7103() {
+    $spec = seg_activity_schema();
+    foreach ($spec as $table_key => $table_info) {
+        if (db_table_exists($table_key)) {
+            foreach ($table_info['fields'] as $field_key => $field) {
+                if (!db_field_exists($table_key, $field_key)) {
+                    db_add_field($table_key, $field_key, $field);
+                } else {
+                    db_change_field($table_key, $field_key, $field_key, $field);
+                }
+            }
+        } else {
+            db_create_table($table_key, $table_info);
+        }
+    }
+}
+?>

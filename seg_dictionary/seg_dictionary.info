@@ -1,0 +1,6 @@
+name = Software Engineering Glossary - Dictionary
+description = "Dictionary"
+package = "Software Engineering Glossary"
+dependencies[] = seg
+core = 7.x
+version = VERSION

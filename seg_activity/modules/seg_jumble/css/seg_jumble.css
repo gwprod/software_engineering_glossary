@@ -1,0 +1,56 @@
+/*
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+*/
+/* 
+    Created on : Nov 13, 2013, 3:18:29 AM
+    Author     : mltbooks
+*/
+
+.jumble_tile {
+    background: none repeat scroll 0 0 #FFFFFF;
+    border: 1px solid #000000;
+    border-radius: 0;
+    float: left;
+    font-size: 19px;
+    margin-left: 10px;
+    padding: 8px;
+    text-align: center;
+    text-transform: uppercase;
+    width: 22px;
+}
+.jumble_space {
+    background-color: #CAE4F9;
+    border-color: #CCCCCC #CCCCCC #000000;
+    border-style: solid;
+    border-width: 1px 1px 2px;
+    display: inline-block;
+    float: left;
+    height: 24px;
+    margin-bottom: 20px;
+    margin-left: 10px;
+    padding: 8px;
+    width: 22px;
+}
+.jumble_space_empty
+{
+    display: inline-block;
+    float: left;
+    height: 24px;
+    margin-bottom: 20px;
+    margin-left: 10px;
+    padding: 8px;
+    width: 22px;
+}
+.tiles {
+    display: inline-block;
+    float: left;
+    width: 100%;
+}
+
+.spaces {
+    display: block;
+    float: left;
+    width: 100%;
+}

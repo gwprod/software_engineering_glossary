@@ -1,0 +1,485 @@
+<?php
+
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+function seg_class_access_control_entity_info() {
+  $entity_info['seg_class'] = array(
+    'paths' => array(
+      'user_list' => array(
+        'url' => 'class/%seg_class/users',
+        'argument' => 1,
+        'type' => MENU_LOCAL_TASK
+      ),
+      'join' => array(
+        'url' => 'class/%seg_class/join',
+        'argument' => 1,
+        'type' => MENU_LOCAL_TASK
+      ),
+      'leave' => array(
+        'url' => 'class/%seg_class/leave',
+        'argument' => 1,
+        'type' => MENU_LOCAL_TASK
+      )
+    ),
+    'roles' => array(
+      'administrator' => array(
+        'label' => t('Instructor'),
+        'permissions' => array(
+          'view user list',
+          'edit user list',
+          'entity owner',
+          'view entity',
+          'edit entity',
+          'delete entity',
+          'create child content'
+        )
+      ),
+      'student' => array(
+        'label' => t('Student'),
+        'permissions' => array(
+          'view entity',
+        )
+      )
+    )
+  );
+  return $entity_info;
+}
+
+function seg_class_access($permission, $seg_class) {
+  $access = false;
+  global $user;
+  switch ($permission) {
+    case 'view class':
+      $access = user_access('access content');
+      break;
+    case 'edit class':
+      $access = user_access('edit any class') || (user_access('edit own class') && TRUE);
+      break;
+  }
+  return $access;
+}
+
+function seg_class_menu() {
+  $menu = array();
+  $menu['class/new'] = array(
+    'title' => t('New Class'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('seg_class_form'),
+    'access arguments' => array('create class'),
+    'type' => MENU_NORMAL_ITEM
+  );
+  $menu['class/list'] = array(
+    'title' => t('List Classes'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('seg_class_list_form'),
+    'access arguments' => array('access content'),
+    'type' => MENU_NORMAL_ITEM
+  );
+  $menu['class/me'] = array(
+    'title' => t('My Classes'),
+    'page callback' => 'seg_class_list_my_classes',
+    'access arguments' => array('access content'),
+    'type' => MENU_NORMAL_ITEM
+  );
+  $menu['class/%seg_class'] = array(
+    'title callback' => 'seg_class_title',
+    'title arguments' => array(1),
+    'page callback' => 'seg_class_view',
+    'page arguments' => array(1),
+    'access callback' => 'seg_class_access',
+    'access arguments' => array('view class', 1),
+    'type' => MENU_NORMAL_ITEM
+  );
+  $menu['class/%seg_class/view'] = array(
+    'title' => t('View'),
+    'page callback' => 'seg_class_view',
+    'page arguments' => array(1),
+    'access callback' => 'seg_class_access',
+    'access arguments' => array('view class', 1),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -100
+  );
+  $menu['class/%seg_class/edit'] = array(
+    'title' => t('Edit'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('seg_class_form', 1),
+    'access callback' => 'seg_class_access',
+    'access arguments' => array('edit class', 1),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -99
+  );
+  $menu['class/%seg_class/delete'] = array(
+    'title' => t('Delete'),
+    'page callback' => 'seg_class_delete',
+    'page arguments' => array(1),
+    'access callback' => 'seg_class_access',
+    'access arguments' => array('delete class', 1),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -98
+  );
+  return $menu;
+}
+
+function seg_class_view($class, $view_mode = 'full') {
+  $class->content = entity_get_controller('seg_class')->buildContent($class, $view_mode);
+
+  // Build fields content - this where the FieldAPI really comes in to play. The dictionary
+  // is relatively trivial for us - it all gets taken care of by Drupal core.
+  /* field_attach_prepare_view('seg_dictionary', array($dictionary->dictionary_id => $dictionary), $view_mode);
+    entity_prepare_view('seg_dictionary', array($dictionary->dictionary_id => $dictionary));
+    $dictionary->content += field_attach_view('seg_dictionary', $dictionary, $view_mode);
+    //drupal_set_title($dictionary->description);
+   */
+  $class->content += array(
+    '#theme' => 'class__' . $view_mode,
+    '#content' => $class->content,
+    '#view_mode' => $view_mode,
+    '#language' => NULL,
+  );
+  return $class->content;
+}
+
+function seg_class_list_my_classes() {
+  global $user;
+  $classes = entity_access_control_entities_for_user('seg_class', $user);
+  $rows = array();
+  foreach ($classes as $class) {
+    $url = $class->uri();
+    //print_r($url);
+    $rows[] = array(
+      'class_name' => l($class->title, $url['path']),
+      'class_description' => $class->description,
+    );
+  }
+  $content['class_list'] = array(
+    '#theme' => 'table',
+    '#rows' => $rows,
+    '#empty' => t('No Classes'),
+    '#header' => array(t('Class Name'), t('Class Description')),
+    '#attributes' => array(
+      ''
+    )
+  );
+  return $content;
+}
+
+function seg_class_permission() {
+  return array(
+    'create class' => array(
+      'title' => t('Create New Class'),
+      'description' => 'Create a new class.'
+    ),
+    'edit own class' => array(
+      'title' => t('Edit Own Class'),
+      'description' => 'Edit a class you are the administrator of.'
+    ),
+    'edit any class' => array(
+      'title' => t('Edit Any Class'),
+      'description' => 'Edit any class.'
+    ),
+    'delete own class' => array(
+      'title' => t('Delete Own Class'),
+      'description' => 'Delete a class you are the administrator of.'
+    ),
+    'delete any class' => array(
+      'title' => t('Delete Any Class'),
+      'description' => 'Delete any class.'
+    )
+  );
+}
+
+class SEGClass extends Entity {
+
+  protected function defaultLabel() {
+    return html_entity_decode($this->title);
+  }
+
+  protected function defaultUri() {
+
+    return array('path' => 'class/' . $this->identifier());
+  }
+
+}
+
+function seg_class_entity_info() {
+  $return = array(
+    'seg_class' => array(
+      'label' => t('SEG Term'),
+      'entity class' => 'SEGClass',
+      'controller class' => 'SEGClassController',
+      'base table' => 'seg_class',
+      'revision table' => 'seg_class_revision',
+      'fieldable' => TRUE,
+      'entity keys' => array(
+        'id' => 'class_id',
+        'bundle' => 'type',
+        'revision' => 'revision_id'
+      ),
+      'bundle keys' => array(
+        'bundle' => 'type',
+      ),
+      'bundles' => array(
+        'project' => array(
+          'label' => 'SEG Term',
+          'admin' => array(
+            'path' => 'admin/structure/seg_class/manage',
+            'access arguments' => array('administer classes'),
+          ),
+        ),
+      ),
+      'load hook' => 'seg_class_load',
+      'view modes' => array(
+        'full' => array(
+          'label' => t('Default'),
+          'custom settings' => FALSE,
+        )
+      ),
+      'label callback' => 'entity_class_label',
+      'uri callback' => 'seg_class_uri',
+      'module' => 'seg_class',
+      'access callback' => 'seg_class_access',
+    ),
+  );
+  return $return;
+}
+
+function seg_class_uri($class) {
+  return array('path' => 'class/' . $class->identifier());
+}
+
+class SEGClassController extends EntityAPIController {
+
+  public function create(array $values = array()) {
+    global $user;
+    $values += array(
+      'term' => '',
+      'description' => '',
+      'created' => REQUEST_TIME,
+      'changed' => REQUEST_TIME,
+      'uid' => $user->uid,
+      'type' => 'seg_class'
+    );
+    return parent::create($values);
+  }
+
+  public function buildContent($entity, $view_mode = 'full', $langcode = NULL, $content = array()) {
+    $wrapper = entity_metadata_wrapper('seg_class', $entity);
+//$content['author'] = array('#markup' => t('Created by: !author', array('!author' => $wrapper->uid->name->value(array('sanitize' => TRUE)))));
+// Make Description and Status themed like default fields.
+    $content['description'] = array(
+      '#theme' => 'field',
+      '#weight' => 0,
+      '#title' => t('Description'),
+      '#access' => TRUE,
+      '#label_display' => 'above',
+      '#view_mode' => 'full',
+      '#language' => LANGUAGE_NONE,
+      '#field_name' => 'field_fake_description',
+      '#field_type' => 'text',
+      '#entity_type' => 'project',
+      '#bundle' => $entity->type,
+      '#items' => array(array('value' => $entity->description)),
+      '#formatter' => 'text_default',
+      0 => array('#markup' => check_plain($entity->description))
+    );
+
+    return parent::buildContent($entity, $view_mode, $langcode, $content);
+  }
+
+}
+
+function seg_class_title($class) {
+  return $class->title;
+}
+
+function seg_class_load($class_id, $reset = false) {
+  $class_ids = (isset($class_id) ? array($class_id) : array());
+  $class = seg_class_load_multiple($class_ids, array(), $reset);
+  return $class ? reset($class) : FALSE;
+}
+
+function seg_class_load_multiple($class_ids = array(), $conditions = array(), $reset = false) {
+  return entity_load('seg_class', $class_ids, $conditions, $reset);
+}
+
+function seg_class_form($form, &$form_state, $seg_class = null) {
+  $form['title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Class Name'),
+    '#required' => TRUE,
+    '#description' => t('The name of the class.'),
+    '#default_value' => isset($seg_class->title) ? $seg_class->title : ''
+  );
+  $form['description'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Class Description'),
+    '#required' => TRUE,
+    '#description' => t('The description of the class.'),
+    '#default_value' => isset($seg_class->description) ? $seg_class->description : ''
+  );
+  $form['dates'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Dates:')
+  );
+  $form['dates']['start_date'] = array(
+    '#title' => t('Start Date'),
+    '#description' => t('When this class begins.'),
+    '#label' => '',
+    '#size' => 10,
+    '#type' => 'date_popup',
+    '#date_format' => 'm-d-Y',
+    '#date_increment' => 15,
+    '#date_year_range' => '0:+5',
+    '#default_value' => date('Y-m-d', isset($seg_class->start_date) ? $seg_class->start_date : time()),
+    '#date_label_position' => 'none',
+    '#show_description' => false,
+  );
+  $form['dates']['end_date'] = array(
+    '#title' => t('End Date'),
+    '#description' => t('When this class ends.'),
+    '#label' => '',
+    '#size' => 10,
+    '#type' => 'date_popup',
+    '#date_format' => 'm-d-Y',
+    '#date_increment' => 15,
+    '#date_year_range' => '0:+5',
+    '#default_value' => date('Y-m-d', isset($seg_class->start_date) ? $seg_class->start_date : time()),
+    '#date_label_position' => 'none',
+    '#show_description' => false,
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => isset($seg_class) ? t('Save') : t('Create Class')
+  );
+  if (isset($seg_class)) {
+    $form['class_id'] = array(
+      '#type' => 'hidden',
+      '#value' => $seg_class->class_id
+    );
+  }
+  return $form;
+}
+
+function seg_class_save($seg_class) {
+  $seg_class->is_new_revision = true;
+  entity_save('seg_class', $seg_class);
+}
+
+function seg_class_form_submit($form, &$form_state) {
+  global $user;
+  $is_new = false;
+  if (isset($form_state['values']['class_id'])) {
+    $class = seg_class_load($form_state['values']['class_id']);
+    $class->title = $form_state['values']['title'];
+    $class->description = $form_state['values']['description'];
+    $class->start_date = $form_state['vaues']['start_date'];
+    $class->end_date = $form_state['values']['end_date'];
+  }
+  else {
+    $class = entity_get_controller('seg_class')->create($form_state['values']);
+    $class->start_date = $form_state['vaues']['start_date'];
+    $class->end_date = $form_state['values']['end_date'];
+    $is_new = true;
+  }
+  field_attach_submit('seg_class', $class, $form, $form_state);
+  seg_class_save($class);
+  seg_class_add_role($class, $user, 1);
+  if($is_new)
+  {
+    entity_access_control_role_grant($class, 'administrator');
+  }
+  $form_state['redirect'] = 'class/' . $class->class_id;
+}
+
+function seg_class_user_has_permission($class, $user, $permission) {
+  
+}
+
+function seg_class_user_has_role($class, $user, $role_id) {
+  $query = db_query('select class_id from {seg_class_members} where class_id = :class_id and  uid = :uid and role_id = :role_id', array(
+    'class_id' => $class->class_id,
+    'uid' => $user->uid,
+    'role_id' => $role_id
+  ));
+  return $query->rowCount() >= 1;
+}
+
+function seg_class_add_role($class, $user, $role_id) {
+  if (!seg_class_user_has_role($class, $user, $role_id)) {
+    $record = array(
+      'class_id' => $class->class_id,
+      'uid' => $user->uid,
+      'role_id' => $role_id
+    );
+    drupal_write_record('seg_class_members', $record
+    );
+  }
+}
+
+function _format_instructors($instructors) {
+  $items = array();
+  if (!empty($instructors)) {
+
+
+    foreach ($instructors as $instructor) {
+      $items[] = array(
+        'data' => format_username($instructor)
+      );
+    }
+  } else {
+    $items[] = array(
+      'data' => t('None')
+    );
+  }
+  $content = array();
+  $content['instructor_list'] = array(
+    '#theme' => 'item_list',
+    '#items' => $items,
+    '#type' => 'ul',
+    '#title' => null,
+    '#attributes' => array()
+  );
+  return $content;
+}
+
+function seg_class_list_classes() {
+
+  $query = db_select('seg_class', 'sc');
+  $query->fields('sc', array('class_id'));
+  $query->rightJoin('seg_class_members', 'scm', 'sc.class_id = scm.class_id');
+  $result = $query->execute();
+  $classes = seg_class_load_multiple(array_keys($result->fetchAllAssoc('class_id')));
+  $rows = array();
+  foreach ($classes as $class) {
+    $url = $class->uri();
+    //print_r($url);
+    $instructors = entity_access_control_user_has_role($class, 'administrator');
+    $rows[] = array(
+      'class_name' => l($class->title, $url['path']),
+      'class_description' => $class->description,
+      'instructors' => drupal_render(_format_instructors($instructors))
+    );
+  }
+  $content['class_list'] = array(
+    '#theme' => 'table',
+    '#rows' => $rows,
+    '#empty' => t('No Classes'),
+    '#header' => array(t('Class Name'), t('Class Description'), t('Instructor(s)')),
+    '#attributes' => array(
+      ''
+    )
+  );
+  return $content;
+}
+
+function seg_class_list_form($form, &$form_state) {
+  $form['results'] = array(
+    '#markup' => drupal_render(seg_class_list_classes())
+  );
+  return $form;
+}
+
+?>

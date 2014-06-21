@@ -1,0 +1,232 @@
+<?php
+
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+function seg_dictionary_schema()
+{
+  $schema['seg_dictionary'] = array(
+    'description' => 'Stores SEG Term dictionarys',
+    'fields' => array(
+      'dictionary_id' => array(
+        'description' => "The dictionary unique ID.",
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'revision_id' => array(
+        'description' => "The revision id.",
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'title' => array(
+        'description' => 'the name of the dictionary',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => 'none'
+      ),
+      'description' => array(
+        'description' => 'the description of the dictionary',
+        'type' => 'text',
+        
+      ),
+      'state' => array(
+        'type' => 'int',
+        'length' => 1,
+        'not null' => TRUE,
+        'default' => 1,
+        'description' => 'Is this term deleted?  0 for deleted, 1 for not deleted'
+      ),
+      'created' => array(
+        'type' => 'int',
+        'length' => 14,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'changed' => array(
+        'type' => 'int',
+        'length' => 14,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'type' => array(
+        'type' => 'varchar',
+        'length' => 100,
+        'not null' => TRUE,
+        'default' => 'seg_dictionary'
+      )
+    ),
+    'primary key' => array('dictionary_id'),
+    
+    'indexes' => array(
+      // Entity index; When searching for an entity, we use both the id and type.
+      'revision' => array('revision_id'),
+    ),
+  );
+  $schema['seg_dictionary_revision'] = array(
+    'description' => 'Stores SEG Term dictionary revision',
+    'fields' => array(
+      'dictionary_id' => array(
+        'description' => "The dictionary unique ID.",
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'revision_id' => array(
+        'description' => "The revision id.",
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE
+      ),
+      'title' => array(
+        'description' => 'the name of the dictionary',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => 'none'
+      ),
+      'description' => array(
+        'description' => 'the description of the dictionary',
+        'type' => 'text',
+        
+      ),
+      'state' => array(
+        'type' => 'int',
+        'length' => 1,
+        'not null' => TRUE,
+        'default' => 1,
+        'description' => 'Is this term deleted?  0 for deleted, 1 for not deleted'
+      ),
+      'created' => array(
+        'type' => 'int',
+        'length' => 14,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'changed' => array(
+        'type' => 'int',
+        'length' => 14,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'type' => array(
+        'type' => 'varchar',
+        'length' => 100,
+        'not null' => TRUE,
+        'default' => 'seg_dictionary'
+      )
+    ),
+    'primary key' => array('revision_id'),
+    
+    'indexes' => array(
+      // Entity index; When searching for an entity, we use both the id and type.
+      'revision' => array('dictionary_id'),
+    ),
+  );
+  $schema['seg_dictionary_tags'] = array(
+    'description' => 'Stores Tags specific to this dictionary',
+    'fields' => array(
+      'tag_id' => array(
+        'description' => "The tag's unique ID.",
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        
+      ),
+      'dictionary_id' => array(
+        'description' => "The dictionary this tag belongs to.",
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE
+      ),
+      'uid' => array(
+        'description' => 'the user creating the tag',
+        'type' => 'int',
+        'not null' => true,
+        'unsigned' => true,
+        'default' => 0
+      ),
+      'tag_name' => array(
+        'description' => 'the name of the tag',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => 'none'
+      ),
+      'tag_description' => array(
+        'description' => 'the description of the dictionary',
+        'type' => 'text',
+        
+      ),
+      'state' => array(
+        'type' => 'int',
+        'length' => 1,
+        'not null' => TRUE,
+        'default' => 1,
+        'description' => 'Is this tag deleted?  0 for deleted, 1 for not deleted'
+      ),
+      
+    ),
+    'primary key' => array('tag_id'),
+    
+    'indexes' => array(
+      // Entity index; When searching for an entity, we use both the id and type.
+      'dictionary' => array('dictionary_id'),
+    ),
+  );
+  return $schema;
+}
+function seg_dictionary_update_7100() {
+    $spec = seg_dictionary_schema();
+    foreach ($spec as $table_key => $table_info) {
+        if (db_table_exists($table_key)) {
+            foreach ($table_info['fields'] as $field_key => $field) {
+                if (!db_field_exists($table_key, $field_key)) {
+                    db_add_field($table_key, $field_key, $field);
+                } else {
+                    db_change_field($table_key, $field_key, $field_key, $field);
+                }
+            }
+        } else {
+            db_create_table($table_key, $table_info);
+        }
+    }
+}
+function seg_dictionary_update_7101() {
+    $spec = seg_dictionary_schema();
+    foreach ($spec as $table_key => $table_info) {
+        if (db_table_exists($table_key)) {
+            foreach ($table_info['fields'] as $field_key => $field) {
+                if (!db_field_exists($table_key, $field_key)) {
+                    db_add_field($table_key, $field_key, $field);
+                } else {
+                    db_change_field($table_key, $field_key, $field_key, $field);
+                }
+            }
+        } else {
+            db_create_table($table_key, $table_info);
+        }
+    }
+}
+function seg_dictionary_update_7102() {
+    $spec = seg_dictionary_schema();
+    foreach ($spec as $table_key => $table_info) {
+        if (db_table_exists($table_key)) {
+            foreach ($table_info['fields'] as $field_key => $field) {
+                if (!db_field_exists($table_key, $field_key)) {
+                    db_add_field($table_key, $field_key, $field);
+                } else {
+                    db_change_field($table_key, $field_key, $field_key, $field);
+                }
+            }
+        } else {
+            db_create_table($table_key, $table_info);
+        }
+    }
+}
+?>

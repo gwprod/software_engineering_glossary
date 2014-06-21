@@ -1,0 +1,308 @@
+<?php
+
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+function seg_jumble_seg_activity_info() {
+  $activity['jumble'] = array(
+    'title' => t('Jumble'),
+    'bundle' => 'jumble',
+    'module' => 'seg_jumble',
+    'form callback' => 'seg_jumble_seg_activity_form',
+    'submit callback' => 'seg_jumble_seg_activity_form_submit',
+    'formatter callback' => 'seg_jumble_seg_activity_formatter'
+  );
+  return $activity;
+}
+
+function seg_jumble_seg_activity_form($form, &$form_state, $class, $activity = null) {
+
+  $form['jumble_options'] = array(
+    '#tree' => TRUE,
+    '#type' => 'fieldset',
+    '#title' => t('Quiz Options')
+  );
+
+  $form['jumble_options']['length'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Number of jumbles.'),
+    '#description' => t('The number of puzzles on this jumble.  Total points will be divided among the questions.'),
+    '#default_value' => isset($activity->data['jumble_options']['length']) ? $activity->data['jumble_options']['length'] : 10
+  );
+  $form['jumble_options']['dictionary'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Dictionaries to use.'),
+    '#description' => t('The dictionaries to use for this jumble.'),
+    '#options' => seg_dictionary_get_dictionaries(),
+    '#default_value' => isset($activity->data['jumble_options']['dictionary']) ? $activity->data['jumble_options']['dictionary'] : array()
+  );
+  return $form;
+}
+
+function seg_jumble_seg_activity_formatter($activity) {
+  return drupal_get_form('seg_jumble_jumble_form', $activity);
+}
+
+function seg_jumble_jumble_form_ajax_callback($form, &$form_state) {
+  return $form;
+}
+
+function seg_jumble_element_info() {
+  return array(
+    'jumble' => array(
+      '#input' => TRUE,
+      '#tree' => TRUE,
+      '#process' => array('seg_jumble_jumble_form_element'),
+      '#value_callback' => 'seg_jumble_jumble_form_value_callback',
+      //'#theme' => array('seg_jumble_jumble_form_element')
+      ),
+    
+    
+    'jumble_tile' => array(
+      '#input' => FALSE,
+      '#process' => array('seg_jumble_jumble_tile_element'),
+      '#value_callback' => 'seg_jumble_jumble_tile_element_callback',
+      '#theme' => array('seg_jumble_jumble_tile_form_element')
+    )
+  );
+}
+
+function seg_jumble_jumble_tile_element($element) {
+  
+}
+function _shuffle($list) { 
+  if (!is_array($list)) return $list; 
+
+  $keys = array_keys($list); 
+  shuffle($keys); 
+  $random = array(); 
+  foreach ($keys as $key) 
+    $random[$key] = $list[$key]; 
+
+  return $random; 
+} 
+function seg_jumble_jumble_form_element($element, &$form_state) {
+  $value = $element['#default_value'];
+  watchdog('seg_jumble_jumble_form_element', print_r($form_state, TRUE));
+  $original_order = str_split($value);
+  $scrambled_order = _shuffle($original_order);
+  //$scrambled_order = $original_order;
+  //shuffle($scrambled_order)
+  $element['jumble_spaces'] = array(
+    '#tree' => TRUE,
+    '#prefix' => '<div class="spaces">',
+    '#suffix' => '</div>'
+  );
+  foreach ($original_order as $key => $character) {
+    if (!ctype_space($character)) {
+      $element['jumble_spaces'][$key] = array(
+        '#markup' => '<div class="jumble_space">&nbsp</div>'
+      );
+    }
+    else {
+      $element['jumble_spaces'][$key] = array(
+        '#markup' => '<div class="jumble_space_empty">&nbsp</div>'
+      );
+    }
+  }
+  $element['jumble_tiles'] = array(
+    '#tree' => TRUE,
+    '#prefix' => '<div class="tiles">',
+    '#suffix' => '</div>'
+  );
+  foreach ($scrambled_order as $key => $character) {
+    if (!ctype_space($character)) {
+      $element['jumble_tiles'][$key] = array(
+        '#markup' => '<div class="jumble_tile">' . $character . '</div>'
+      );
+    }
+  }
+  //$element['clue'] => 
+  watchdog('seg_jumble_jumble_form_element', print_r($element, TRUE));
+  return $element;
+}
+
+function seg_jumble_jumble_form_submit($form, &$form_state) {
+  // First we determine which step we are on, and save the
+  // submitted values to $form_state['storage']. This will
+  // allow our submitted values to persist.
+  $step = $form_state['step'];
+  //watchdog('submit', print_r($form_state['values'], TRUE));
+  if (isset($form_state['values']['submission_id'])) {
+    $submission = seg_activity_submission_load($form_state['values']['submission_id']);
+    //watchdog('submission', print_r($submission, TRUE));
+  }
+  $jumble = seg_activity_load($form_state['values']['jumble_id']);
+  $form_state['storage']['step_' . $step] = $form_state['values']['step_' . $step];
+  if ($step > 0 && $form_state['values']['step_' . $step]['answer'] == $form_state['values']['step_' . $step]['correct_answer']) {
+    $form_state['storage']['score'] += $jumble->score / $jumble->data['jumble_options']['length'];
+  }
+  //watchdog('seg_jumble_jumble_form_submit', print_r($form_state['values']['step_' . $step], TRUE));
+  // check to see if the start jumble button was clicked.
+  if (isset($form_state['values']['start']) && $form_state['values']['op'] == $form_state['values']['start']) {
+
+    $form_state['step'] ++;
+  }
+  // Check to see if the next/forward button was clicked
+  if (isset($form_state['values']['forward']) && $form_state['values']['op'] == $form_state['values']['forward']) {
+    // Increase the step by one, to move on to the next step
+    $form_state['step'] ++;
+    $submission->data['step'] = $form_state['step'];
+    $submission->data['storage'] = $form_state['storage'];
+    entity_save('seg_activity_submission', $submission);
+  }
+// Check to see if the final step has been submitted
+  elseif (isset($form_state['values']['submit']) && $form_state['values']['op'] == $form_state['values']['submit']) {
+    // Here we will collect the data and show the submitted values to the user in a message.
+    // In a real-world application of this form, you would use the submitted values to complete the
+    // purpose of the form - save them to the database and/or send an email and/or display something
+    // to the user etc. The following is just s simple example to show how the values can be used.
+    //$items = array($form_state['storage']['step_1'], $form_state['storage']['step_2'], $form_state['storage']['step_3']);
+    //drupal_set_message(t('You submitted the following values:!values', array('!values' => theme('item_list', array('items' => $items)))));
+    // The form has been completed, so we want to return the user to step 1
+    // as well as clear any saved values.
+    $submission->data['storage'] = $form_state['storage'];
+    $submission->score = $form_state['storage']['score'];
+    $submission->status = 1;
+    entity_save('seg_activity_submission', $submission);
+    $form_state['step'] = 0;
+    $form_state['storage'] = array();
+  }
+
+// As in ajax_form_multistep_form_back_submit(), we need to set
+// $form_state['rebuild'] to TRUE, in able to ensure that our
+// our form is rebuilt, allowing for the multi-step process
+  //watchdog('seg_jumble_jumble_form_submit', print_r($form_state, TRUE));
+  $form_state['rebuild'] = TRUE;
+}
+
+function seg_jumble_jumble_form($form, &$form_state, $jumble) {
+
+  drupal_add_js(drupal_get_path('module', 'seg_jumble') . '/js/seg_jumble.js');
+  drupal_add_library('system', 'drupal.ajax');
+  drupal_add_library('system', 'ui.draggable');
+  drupal_add_library('system', 'ui.droppable');
+  drupal_add_library('system', 'ui.sortable');
+  global $user;
+  $question = 1;
+  $form_state['step'] = isset($form_state['step']) ? $form_state['step'] : 0;
+  $form['#prefix'] = '<div id="jumble_question">';
+  $form['#suffix'] = '</div>';
+  $form['jumble_id'] = array(
+    '#type' => 'hidden',
+    '#value' => $jumble->activity_id
+  );
+  $previous_submissions = seg_activity_submission_get_submissions($jumble, $user);
+
+  if ($form_state['step'] == 0) {
+    $form['previous_submissions'] = array(
+      '#markup' => drupal_render(seg_activity_submission_list_submissions($jumble, $previous_submissions))
+    );
+
+    $form['start'] = array(
+      '#type' => 'submit',
+      '#value' => t('Start the jumble'),
+      '#ajax' => array
+        (
+        // We pass in the wrapper we created at the start of the form
+        'wrapper' => 'jumble_question',
+        // We pass a callback function we will use later to render the form for the user
+        'callback' => 'seg_jumble_jumble_form_ajax_callback',
+      ),
+    );
+  }
+  else {
+
+    if (!isset($form_state['values']['submission_id'])) {
+      $submission = seg_activity_submission_create($jumble, array(
+        'step' => 1
+      ));
+    }
+    else {
+      $submission = seg_activity_submission_load($form_state['values']['submission_id']);
+    }
+
+    $form['submission_id'] = array(
+      '#type' => 'hidden',
+      '#value' => $submission->submission_id
+    );
+    if (!isset($form_state['jumble_instance'])) {
+      $jumble_instance = seg_jumble_generate_jumble($jumble);
+      watchdog('jumble_instance', print_r($jumble_instance, TRUE));
+      $form_state['jumble_instance'] = $jumble_instance;
+    }
+    else {
+      $jumble_instance = $form_state['jumble_instance'];
+    }
+    $question_instance = $jumble_instance['questions'][$form_state['step']];
+
+    //$form['#submit'] = 'seg_jumble_jumble_form_submit';
+
+
+    $form['step_' . $form_state['step']] = array(
+      '#tree' => TRUE
+    );
+    $form['step_' . $form_state['step']]['message'] = array(
+      '#type' => 'item',
+      '#markup' => t($jumble->title . ': Question @question of @total_questions.  @score/@max_score', array('@question' => $form_state['step'], '@total_questions' => $jumble->data['jumble_options']['length'], '@score' => isset($form_state['storage']['score']) ? $form_state['storage']['score'] : 0, '@max_score' => $jumble->score))
+    );
+    $form['step_' . $form_state['step']]['question'] = array(
+      '#type' => 'jumble',
+      '#default_value' => $question_instance['value']
+    );
+    $form['step_' . $form_state['step']]['clue'] = array(
+      '#type' => 'item',
+      '#title' => t('Clue'),
+      '#markup' => $question_instance['description']
+    );
+    
+    if ($jumble->data['jumble_options']['length'] > $form_state['step']) {
+      $form['forward'] = array(
+        '#type' => 'submit',
+        '#value' => t('Next Question'),
+        '#ajax' => array
+          (
+          // We pass in the wrapper we created at the start of the form
+          'wrapper' => 'jumble_question',
+          // We pass a callback function we will use later to render the form for the user
+          'callback' => 'seg_jumble_jumble_form_ajax_callback',
+        ),
+      );
+    }
+    else {
+      $form['submit'] = array(
+        '#type' => 'submit',
+        '#value' => t('Submit'),
+        '#ajax' => array
+          (
+          // We pass in the wrapper we created at the start of the form
+          'wrapper' => 'jumble_question',
+          // We pass a callback function we will use later to render the form for the user
+          'callback' => 'seg_jumble_jumble_form_ajax_callback',
+        ),
+      );
+    }
+  }
+
+  return $form;
+}
+
+function seg_jumble_generate_jumble($jumble) {
+  $dictionaries = seg_dictionary_load_multiple(array_keys($jumble->data['jumble_options']['dictionary']));
+  $number_of_questions = $jumble->data['jumble_options']['length'];
+  $jumble_instance = array();
+  $jumble_instance['jumble'] = $jumble;
+  $jumble_instance['questions'] = array();
+  $terms = seg_term_dictionary_random_terms($dictionaries, array(), $jumble->data['jumble_options']['length']);
+  $i = 0;
+  foreach ($terms as $term) {
+    $jumble_instance['questions'][$i++] = array(
+      'value' => $term->term,
+      'description' => $term->description
+    );
+  }
+  return $jumble_instance;
+}

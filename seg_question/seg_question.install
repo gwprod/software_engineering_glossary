@@ -1,0 +1,155 @@
+<?php
+
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+function seg_term_schema() {
+  $schema['seg_question'] = array(
+    'description' => 'Stores SEG question',
+    'fields' => array(
+      'question_id' => array(
+        'description' => "The question unique ID.",
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'revision_id' => array(
+        'description' => 'The question Revision ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'uid' => array(
+        'type' => 'int',
+        'length' => 11,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The user id that created the term',
+      ),
+      'question' => array(
+        'type' => 'text',
+        
+        'not null' => TRUE,
+        'default' => ''
+      ),
+      
+    ),
+    'primary key' => array('question_id'),
+    'foreign keys' => array(
+      'users' => array(
+        'table' => 'users',
+        'columns' => array('uid' => 'uid'),
+      ),
+    ),
+    'indexes' => array(
+      // Entity index; When searching for an entity, we use both the id and type.
+      'revision' => array('revision_id'),
+    ),
+  );
+  $schema['seg_question_revision'] = array(
+    'description' => 'Stores SEG question revision',
+    'fields' => array(
+      'question_id' => array(
+        'description' => "The question unique ID.",
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'revision_id' => array(
+        'description' => 'The question Revision ID.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'uid' => array(
+        'type' => 'int',
+        'length' => 11,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The user id that created the term',
+      ),
+      'question' => array(
+        'type' => 'text',
+        
+        'not null' => TRUE,
+        'default' => ''
+      ),
+      
+    ),
+    'primary key' => array('revision_id'),
+    'foreign keys' => array(
+      'users' => array(
+        'table' => 'users',
+        'columns' => array('uid' => 'uid'),
+      ),
+    ),
+    'indexes' => array(
+      // Entity index; When searching for an entity, we use both the id and type.
+      'revision' => array('revision_id'),
+    ),
+  );
+  $schema['seg_question_submission'] = array(
+    'description' => 'Stores SEG question submissions',
+    'fields' => array(
+      'submission_id' => array(
+        'description' => "The question submission ID.",
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'question_id' => array(
+        'description' => 'The Question ID',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'revision_id' => array(
+        'description' => 'The question Revision ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'uid' => array(
+        'type' => 'int',
+        'length' => 11,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The user id that submitted the answer',
+      ),
+      'correct_answer' => array(
+        'type' => 'int',
+        'description' => 'the delta value of the correct question answer',
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'submitted_answer' => array(
+        'type' => 'int',
+        'description' => 'the delta value of the submitted question answer',
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      
+    ),
+    'primary key' => array('submission_id'),
+    'foreign keys' => array(
+      'users' => array(
+        'table' => 'users',
+        'columns' => array('uid' => 'uid'),
+      ),
+    ),
+    'indexes' => array(
+      // Entity index; When searching for an entity, we use both the id and type.
+      'revision' => array('revision_id'),
+    ),
+  );
+  
+  return $schema;
+}
+
+?>

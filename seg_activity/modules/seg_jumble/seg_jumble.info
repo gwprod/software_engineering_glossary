@@ -1,0 +1,8 @@
+name = Software Engineering Glossary - Activity - Jumble
+description = "Jumble"
+package = "Software Engineering Glossary"
+dependencies[] = seg
+dependencies[] = seg_activity
+core = 7.x
+version = VERSION
+stylesheets[all][] = css/seg_jumble.css

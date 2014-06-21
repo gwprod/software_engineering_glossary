@@ -1,0 +1,481 @@
+<?php
+
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+require_once DRUPAL_ROOT . '/' . drupal_get_path('module', 'seg_dictionary') . "/seg_dictionary.tag.inc";
+
+function seg_dictionary_delete_form($form, &$form_state, $dictionary)
+{
+  return $form;
+}
+function seg_dictionary_delete_form_submit($form, &$form_state)
+{
+  
+}
+function seg_dictionary_form($form, &$form_state, $dictionary = null) {
+  $form['title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Dictionary Title'),
+    '#description' => t('The name of the dictionary'),
+    '#default_value' => isset($dictionary) ? $dictionary->title : '',
+    '#required' => TRUE,
+  );
+  $form['description'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Dictionary Description'),
+    '#description' => t('The description of the dictionary'),
+    '#default_value' => isset($dictionary) ? $dictionary->description : '',
+    '#required' => TRUE
+  );
+  if (isset($dictionary)) {
+    $form['dictionary_id'] = array(
+      '#type' => 'hidden',
+      '#value' => $dictionary->dictionary_id
+    );
+  }
+  $form['save'] = array(
+    '#type' => 'submit',
+    '#value' => !isset($dictionary) ? t('Create Dictionary') : t('Save Dictionary')
+  );
+  return $form;
+}
+
+function seg_dictionary_form_submit($form, &$form_state) {
+  if (isset($form_state['values']['dictionary_id'])) {
+    $dictionary = seg_dictionary_load($form_state['values']['dictionary_id']);
+    $dictionary->title = $form_state['values']['title'];
+    $dictionary->description = $form_state['values']['description'];
+  }
+  else {
+    $dictionary = entity_get_controller('seg_dictionary')->create($form_state['values']);
+  }
+  seg_dictionary_save($dictionary);
+  $form_state['redirect'] = 'dictionary/' . $dictionary->dictionary_id;
+}
+
+function seg_dictionary_save($dictionary) {
+  entity_save('seg_dictionary', $dictionary);
+}
+function seg_dictionary_title($dictionary)
+{
+  return $dictionary->title;
+}
+function seg_dictionary_page_view($dictionary, $view_mode = 'full') {
+  $dictionary->content = entity_get_controller('seg_dictionary')->buildContent($dictionary, $view_mode);
+
+  // Build fields content - this where the FieldAPI really comes in to play. The dictionary
+  // is relatively trivial for us - it all gets taken care of by Drupal core.
+  /* field_attach_prepare_view('seg_dictionary', array($dictionary->dictionary_id => $dictionary), $view_mode);
+    entity_prepare_view('seg_dictionary', array($dictionary->dictionary_id => $dictionary));
+    $dictionary->content += field_attach_view('seg_dictionary', $dictionary, $view_mode);
+    //drupal_set_title($dictionary->description);
+   */
+  $dictionary->content += array(
+    '#theme' => 'dictionary__' . $view_mode,
+    '#content' => $dictionary->content,
+    '#view_mode' => $view_mode,
+    '#language' => NULL,
+  );
+  return $dictionary->content;
+}
+
+function seg_dictionary_field_extra_fields() {
+  $extra['seg_dictionary']['seg_dictionary'] = array(
+    'form' => array(
+      'title' => array(
+        'label' => t('Title'),
+        'description' => t('Dictionary Title Form Element'),
+        'weight' => -5,
+      ),
+      'description' => array(
+        'label' => t('Description'),
+        'description' => t('Dictionary Description form element'),
+        'weight' => -4,
+      )
+    ),
+    'display' => array(
+      'title' => array(
+        'label' => t('Title'),
+        'description' => t('Dictionary Title form element'),
+        'weight' => -5,
+      ),
+      'description' => array(
+        'label' => t('Description'),
+        'description' => t('Dictionary Description form element'),
+        'weight' => -4,
+      ),
+      'terms_list' => array(
+        'label' => t('Term List'),
+        'description' => t('Term List'),
+        'weight' => -3
+      )
+    ),
+  );
+  return $extra;
+}
+
+function seg_dictionary_theme($existing, $type, $theme, $path) {
+  return array
+    (
+    'dictionary__full' => array
+      (
+      'template' => 'dictionary--full',
+      'variables' => array('content' => null),
+      'path' => drupal_get_path('module', 'seg_dictionary') . '/template'
+    ),
+  );
+}
+
+function seg_dictionary_menu() {
+  $menu = array();
+  $menu['admin/structure/seg_dictionary/manage'] = array(
+    'title' => t('SEG Dictionary'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('seg_dictionary_admin_manage_form'),
+    'access arguments' => array('administer dictionary'),
+    'file' => 'seg_dictionary.admin.inc'
+  );
+  $menu['dictionary/create'] = array(
+    'title' => t('Create Dictionary'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('seg_dictionary_form'),
+    'access callback' => 'seg_dictionary_access',
+    'access arguments' => array('create dictionary')
+  );
+  $menu['dictionary/list'] = array(
+    'title' => t('Dictionary List'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('seg_dictionary_list_dictionaries_form'),
+    'access arguments' => array('access content')
+  );
+  $menu['dictionary/%seg_dictionary'] = array(
+    'title' => t('View'),
+    'title callback' => 'seg_dictionary_title',
+    'title arguments' => array(1),
+    'page callback' => 'seg_dictionary_page_view',
+    'page arguments' => array(1),
+    'access callback' => 'seg_dictionary_access',
+    'access arguments' => array('view dictionary', 1),
+    'type' => MENU_NORMAL_ITEM
+  );
+  $menu['dictionary/%seg_dictionary/view'] = array(
+    'title' => t('View'),
+    'page callback' => 'seg_dictionary_page_view',
+    'page arguments' => array(1),
+    'access callback' => 'seg_dictionary_access',
+    'access arguments' => array('view dictionary', 1),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -100
+  );
+  $menu['dictionary/%seg_dictionary/edit'] = array(
+    'title' => t('Edit'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('seg_dictionary_form', 1),
+    'access callback' => 'seg_dictionary_access',
+    'access arguments' => array('edit dictionary', 1),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -99
+  );
+  $menu['dictionary/%seg_dictionary/tags'] = array(
+    'title' => t('Tags'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('seg_dictionary_tag_form', 1),
+    'access callback' => 'seg_dictionary_access',
+    'access arguments' => array('edit dictionary', 1),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -99
+  );
+  $menu['dictionary/%seg_dictionary/delete'] = array(
+    'title' => t('Delete'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('seg_dictionary_delete_form', 1),
+    'access callback' => 'seg_dictionary_access',
+    'access arguments' => array('edit dictionary', 1),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -98
+  );
+  return $menu;
+}
+
+function seg_dictionary_list_dictionaries_form($form, &$form_state) {
+  //print_r($form_state['values']);
+  if (isset($form_state['values']['search_form']['search']) && strlen($form_state['values']['search_form']['search']) > 0) {
+
+    $search_term = $form_state['values']['search_form']['search'];
+  }
+  else {
+    $search_term = null;
+  }
+  $form['search_form'] = array(
+    '#tree' => TRUE,
+    '#type' => 'fieldset'
+  );
+  $form['search_form']['search'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Search'),
+    '#default_value' => isset($search_term) ? $search_term : ''
+  );
+  $form['search_form']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Search')
+  );
+  $form['results'] = array(
+    '#markup' => render(_seg_dictionary_list_dictionaries($search_term))
+  );
+  return $form;
+}
+
+function seg_dictionary_list_dictionaries_form_submit($form, &$form_state) {
+  $form_state['rebuild'] = true;
+}
+
+function _seg_dictionary_list_dictionaries($search_term = null) {
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'seg_dictionary');
+  if (isset($search_term)) {
+    $query->propertyCondition('title', '%' . $search_term . '%', 'LIKE');
+  }
+  $query->propertyCondition('state', 1);
+  $result = $query->execute();
+  $rows = array();
+  if (!empty($result['seg_dictionary'])) {
+    $dictionaries = seg_dictionary_load_multiple(array_keys($result['seg_dictionary']));
+
+    foreach ($dictionaries as $dictionary) {
+      $dictionary_url = entity_uri('seg_dictionary', $dictionary);
+      //print_r($dictionary_url);
+      $rows[] = array(
+        'dictionary_name' => l($dictionary->title, $dictionary_url['path'])
+      );
+    }
+  }
+  $content['new_dictionary'] = array(
+    '#theme' => 'link',
+    '#text' => 'New Dictionary',
+    '#path' => 'dictionary/create',
+    '#weight' => -100,
+    '#options' => array(
+      'attributes' => array('class' => array('button'), 'id' => 'new-task'),
+      //REQUIRED:
+      'html' => FALSE,
+    ),
+    '#access' => user_access('create dictionaries')
+  );
+  $content['dictionary_list'] = array(
+    '#theme' => 'table',
+    '#rows' => $rows,
+    '#empty' => t('No Dictionaries'),
+    '#header' => array(t('Dictionary Name')),
+    '#attributes' => array(
+      ''
+    )
+  );
+  return $content;
+}
+
+function seg_dictionary_entity_info() {
+  $return = array(
+    'seg_dictionary' => array(
+      'label' => t('SEG Dictionary'),
+      'entity class' => 'SEGDictionary',
+      'controller class' => 'SEGDictionaryController',
+      'base table' => 'seg_dictionary',
+      'revision table' => 'seg_dictionary_revision',
+      'fieldable' => TRUE,
+      'entity keys' => array(
+        'id' => 'dictionary_id',
+        'bundle' => 'type',
+        'revision' => 'revision_id'
+      ),
+      'bundle keys' => array(
+        'bundle' => 'type',
+      ),
+      'bundles' => array(
+        'seg_dictionary' => array(
+          'label' => 'SEG Dictionary',
+          'admin' => array(
+            'path' => 'admin/structure/seg_dictionary/manage',
+            'access arguments' => array('administer dictionary'),
+          ),
+        ),
+      ),
+      'load hook' => 'seg_dictionary_load',
+      'view modes' => array(
+        'default' => array(
+          'label' => t('Default'),
+          'custom settings' => TRUE,
+        ),
+        'full' => array(
+          'label' => t('Full'),
+          'custom settings' => TRUE,
+        )
+      ),
+      'label callback' => 'entity_class_label',
+      'uri callback' => 'entity_class_uri',
+      'module' => 'seg_dictionary',
+      'access callback' => 'seg_dictionary_access',
+    ),
+  );
+  return $return;
+}
+function seg_dictionary_get_dictionaries()
+{
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'seg_dictionary');
+  $result = $query->execute();
+  $output = array();
+  if(!empty($result['seg_dictionary']))
+  {
+    $dictionaries = seg_dictionary_load_multiple(array_keys($result['seg_dictionary']));
+    foreach($dictionaries as $dictionary)
+    {
+      $output[$dictionary->dictionary_id] = $dictionary->title;
+    }
+  }
+  return $output;
+}
+function seg_dictionary_access($permission, $dictionary = null) {
+  global $user;
+  switch ($permission) {
+    case 'create dictionary':
+      return user_access('create dictionary', $user);
+      break;
+    case 'edit own dictionary':
+      return user_access('edit own dictionary', $user) || $dictionary->uid = $user->uid;
+      break;
+    case 'edit any dictionary':
+      return user_access('edit any dictionary', $user);
+      break;
+    case 'edit dictionary':
+      return seg_dictionary_access('edit own dictionary', $dictionary) || seg_dictionary_access('edit any dictionary', $dictionary);
+      break;
+    case 'view dictionary':
+      return user_access('access content');
+      break;
+  }
+  return false;
+}
+
+function seg_dictionary_permission() {
+  return array(
+    'administer dictionary' => array(
+      'title' => t('Administer Dictionaries'),
+      'description' => t('Administer Dictionaries')
+    ),
+    'create dictionary' => array(
+      'title' => t('Create Dictionary'),
+      'description' => t('Create Dictionaries')
+    ),
+    'edit own dictionary' => array(
+      'title' => t('Edit Own Dictionary'),
+      'description' => t('Edit Own Dictionary')
+    ),
+    'edit any dictionary' => array(
+      'title' => t('Edit Any Dictionary'),
+      'description' => t('Edit Any Dictionary')
+    )
+  );
+}
+
+class SEGDictionary extends Entity {
+
+  protected function defaultLabel() {
+    return html_entity_decode($this->title);
+  }
+
+  protected function defaultUri() {
+
+    return array('path' => 'dictionary/' . $this->identifier());
+  }
+
+}
+
+class SEGDictionaryController extends EntityAPIController {
+
+  public function create(array $values = array()) {
+    global $user;
+    $values += array(
+      'term' => '',
+      'description' => '',
+      'created' => REQUEST_TIME,
+      'changed' => REQUEST_TIME,
+      'uid' => $user->uid,
+      'type' => 'seg_dictionary'
+    );
+    return parent::create($values);
+  }
+
+  public function buildContent($entity, $view_mode = 'full', $langcode = NULL, $content = array()) {
+    $wrapper = entity_metadata_wrapper('seg_dictionary', $entity);
+//$content['author'] = array('#markup' => t('Created by: !author', array('!author' => $wrapper->uid->name->value(array('sanitize' => TRUE)))));
+// Make Description and Status themed like default fields.
+    $extra_fields = field_info_extra_fields('seg_dictionary', 'seg_dictionary', 'display');
+    //print_r($extra_fields);
+    $content['title'] = array(
+      '#theme' => 'field',
+      '#weight' => $extra_fields['title']['display'][$view_mode]['weight'],
+      '#title' => t('Title'),
+      '#access' => TRUE,
+      '#label_display' => 'above',
+      '#view_mode' => 'full',
+      '#language' => LANGUAGE_NONE,
+      '#field_name' => 'field_fake_title',
+      '#field_type' => 'text',
+      '#entity_type' => 'seg_dictionary',
+      '#bundle' => $entity->type,
+      '#items' => array(array('value' => $entity->title)),
+      '#formatter' => 'text_default',
+      0 => array('#markup' => check_plain($entity->title))
+    );
+    $content['description'] = array(
+      '#theme' => 'field',
+      '#weight' => $extra_fields['description']['display'][$view_mode]['weight'],
+      '#title' => t('Description'),
+      '#access' => TRUE,
+      '#label_display' => 'above',
+      '#view_mode' => 'full',
+      '#language' => LANGUAGE_NONE,
+      '#field_name' => 'field_fake_description',
+      '#field_type' => 'text',
+      '#entity_type' => 'seg_dictionary',
+      '#bundle' => $entity->type,
+      '#items' => array(array('value' => $entity->description)),
+      '#formatter' => 'text_default',
+      0 => array('#markup' => check_plain($entity->description))
+    );
+    if (module_exists('seg_term')) {
+      $terms = drupal_render(seg_term_dictionary_list_terms($entity));
+      $content['term_list'] = array(
+        '#theme' => 'field',
+        '#weight' => $extra_fields['terms_list']['display'][$view_mode]['weight'],
+        '#title' => t('Terms'),
+        '#access' => TRUE,
+        '#label_display' => 'hidden',
+        '#view_mode' => 'full',
+        '#language' => LANGUAGE_NONE,
+        '#field_name' => 'field_fake_term_list',
+        '#field_type' => 'text',
+        '#entity_type' => 'seg_dictionary',
+        '#items' => array(array('value' => $terms)),
+        '#bundle' => $entity->type,
+        0 => array('#markup' => $terms)
+      );
+    }
+    return parent::buildContent($entity, $view_mode, $langcode, $content);
+  }
+
+}
+
+function seg_dictionary_load($dictionary_id, $reset = false) {
+  $dictionary_ids = (isset($dictionary_id) ? array($dictionary_id) : array());
+  $dictionary = seg_dictionary_load_multiple($dictionary_ids, array(), $reset);
+  return $dictionary ? reset($dictionary) : FALSE;
+}
+
+function seg_dictionary_load_multiple($dictionary_ids = array(), $conditions = array(), $reset = false) {
+  return entity_load('seg_dictionary', $dictionary_ids, $conditions, $reset);
+}
+
+?>

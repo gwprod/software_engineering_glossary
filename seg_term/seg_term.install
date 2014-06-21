@@ -1,0 +1,180 @@
+<?php
+
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+function seg_term_schema() {
+  $schema['seg_term'] = array(
+    'description' => 'Stores SEG Term',
+    'fields' => array(
+      'term_id' => array(
+        'description' => "The term unique ID.",
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'revision_id' => array(
+        'description' => 'The Term Revision ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'uid' => array(
+        'type' => 'int',
+        'length' => 11,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The user id that created the term',
+      ),
+      'term' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''
+      ),
+      'description' => array(
+        'type' => 'text',
+        
+        
+      ),
+      'state' => array(
+        'type' => 'int',
+        'length' => 1,
+        'not null' => TRUE,
+        'default' => 1,
+        'description' => 'Is this term deleted?  0 for deleted, 1 for not deleted'
+      ),
+      'created' => array(
+        'type' => 'int',
+        'length' => 14,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'changed' => array(
+        'type' => 'int',
+        'length' => 14,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'type' => array(
+        'type' => 'varchar',
+        'length' => 100,
+        'not null' => TRUE,
+        'default' => 'seg_term'
+      )
+    ),
+    'primary key' => array('term_id'),
+    'foreign keys' => array(
+      'users' => array(
+        'table' => 'users',
+        'columns' => array('uid' => 'uid'),
+      ),
+    ),
+    'indexes' => array(
+      // Entity index; When searching for an entity, we use both the id and type.
+      'revision' => array('revision_id'),
+    ),
+  );
+  $schema['seg_term_revision'] = array(
+    'description' => 'Stores SEG Term revisions',
+    'fields' => array(
+      'term_id' => array(
+        'description' => "The term unique ID.",
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'revision_id' => array(
+        'description' => 'The Term Revision ID.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        
+      ),
+      'uid' => array(
+        'type' => 'int',
+        'length' => 11,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The user id that created the term',
+      ),
+      'term' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''
+      ),
+      'description' => array(
+        'type' => 'text',
+        
+      ), 
+      'state' => array(
+        'type' => 'int',
+        'length' => 1,
+        'not null' => TRUE,
+        'default' => 1,
+        'description' => 'Is this term deleted?  0 for deleted, 1 for not deleted'
+      ),
+      'created' => array(
+        'type' => 'int',
+        'length' => 14,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'changed' => array(
+        'type' => 'int',
+        'length' => 14,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'type' => array(
+        'type' => 'varchar',
+        'length' => 100,
+        'not null' => TRUE,
+        'default' => 'seg_term'
+      )
+    ),
+    'primary key' => array('revision_id'),
+    'foreign keys' => array(
+      'users' => array(
+        'table' => 'users',
+        'columns' => array('uid' => 'uid'),
+      ),
+    ),
+    'indexes' => array(
+      // Entity index; When searching for an entity, we use both the id and type.
+      'term' => array('term_id'),
+    ),
+  );
+  $schema['seg_term_dictionary'] = array(
+    'description' => 'Stores SEG Term dictionary associations',
+    'fields' => array(
+      'term_id' => array(
+        'description' => "The term unique ID.",
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'dictionary_id' => array(
+        'description' => "The dictionary this term belongs to.",
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE
+      )
+    ),
+    'primary key' => array('term_id', 'dictionary_id'),
+    'foreign keys' => array(
+      'seg_dictionary' => array(
+        'table' => 'seg_dictionary',
+        'columns' => array('dictionary_id' => 'dictionary_id'),
+      ),
+    ),
+  );
+  return $schema;
+}
+
+?>

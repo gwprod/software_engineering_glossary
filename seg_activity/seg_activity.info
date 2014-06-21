@@ -1,0 +1,7 @@
+name = Software Engineering Glossary - Activity
+description = "Activity"
+package = "Software Engineering Glossary"
+dependencies[] = seg
+
+core = 7.x
+version = VERSION

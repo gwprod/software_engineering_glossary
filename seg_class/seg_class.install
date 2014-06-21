@@ -1,0 +1,256 @@
+<?php
+
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+function seg_class_schema()
+{
+  $schema['seg_class'] = array(
+    'description' => 'Stores SEG Class',
+    'fields' => array(
+      'class_id' => array(
+        'description' => "The class unique ID.",
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'revision_id' => array(
+        'description' => 'The class Revision ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'uid' => array(
+        'type' => 'int',
+        'length' => 11,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The user id that created the class',
+      ),
+      'title' => array(
+        'description' => 'The name of the class',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''
+      ),
+      'description' => array(
+        'description' => 'The description of the class',
+        'type' => 'text',
+        
+        'not null' => TRUE
+      ),
+      'state' => array(
+        'type' => 'int',
+        'length' => 1,
+        'not null' => TRUE,
+        'default' => 1,
+        'description' => 'Is this class deleted?  0 for deleted, 1 for not deleted'
+      ),
+      'created' => array(
+        'type' => 'int',
+        'length' => 14,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'changed' => array(
+        'type' => 'int',
+        'length' => 14,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'type' => array(
+        'type' => 'varchar',
+        'length' => 100,
+        'not null' => TRUE,
+        'default' => 'seg_class'
+      ),
+      'start_date' => array(
+        'type' => 'int',
+        'length' => 14,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'end_date' => array(
+        'type' => 'int',
+        'length' => 14,
+        'not null' => TRUE,
+        'default' => 0
+      )
+    ),
+    'primary key' => array('class_id'),
+    'foreign keys' => array(
+      'users' => array(
+        'table' => 'users',
+        'columns' => array('uid' => 'uid'),
+      ),
+    ),
+    'indexes' => array(
+      // Entity index; When searching for an entity, we use both the id and type.
+      'revision' => array('revision_id'),
+    ),
+  );
+  $schema['seg_class_revision'] = array(
+    'description' => 'Stores SEG Class Revision',
+    'fields' => array(
+      'class_id' => array(
+        'description' => "The class unique ID.",
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'revision_id' => array(
+        'description' => 'The class Revision ID.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        
+      ),
+      'uid' => array(
+        'type' => 'int',
+        'length' => 11,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The user id that created the class',
+      ),
+      'title' => array(
+        'description' => 'The name of the class',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''
+      ),
+      'description' => array(
+        'description' => 'The description of the class',
+        'type' => 'text',
+        
+        'not null' => TRUE
+      ),
+      'state' => array(
+        'type' => 'int',
+        'length' => 1,
+        'not null' => TRUE,
+        'default' => 1,
+        'description' => 'Is this class deleted?  0 for deleted, 1 for not deleted'
+      ),
+      'created' => array(
+        'type' => 'int',
+        'length' => 14,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'changed' => array(
+        'type' => 'int',
+        'length' => 14,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'type' => array(
+        'type' => 'varchar',
+        'length' => 100,
+        'not null' => TRUE,
+        'default' => 'seg_class'
+      ),
+      'start_date' => array(
+        'type' => 'int',
+        'length' => 14,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'end_date' => array(
+        'type' => 'int',
+        'length' => 14,
+        'not null' => TRUE,
+        'default' => 0
+      )
+    ),
+    'primary key' => array('revision_id'),
+    'foreign keys' => array(
+      'users' => array(
+        'table' => 'users',
+        'columns' => array('uid' => 'uid'),
+      ),
+    ),
+    
+    
+  );
+  $schema['seg_class_members'] = array(
+    'description' => 'Stores SEG Class Members',
+    'fields' => array(
+      'class_id' => array(
+        'description' => "The class unique ID.",
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'uid' => array(
+        'description' => "The user that is a member.",
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE
+      ),
+      'role_id' => array(
+        'description' => "The user's role in the class.",
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 3
+      )
+    ),
+    'primary key' => array('class_id', 'uid', 'role_id'),
+    'foreign keys' => array(
+      'seg_dictionary' => array(
+        'table' => 'users',
+        'columns' => array('uid' => 'uid'),
+      ),
+    ),
+  );
+  $schema['seg_class_role'] = array(
+    'description' => 'Stores SEG Class Roles',
+    'fields' => array(
+      'role_id' => array(
+        'description' => "The role unique ID.",
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'role_name' => array(
+        'description' => "The name of the role.",
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE
+      )
+      
+    ),
+    'primary key' => array('role_id'),
+    
+  );
+  $schema['seg_class_role_permissions'] = array(
+    'description' => 'Stores SEG Role Permissions',
+    'fields' => array(
+      'role_id' => array(
+        'description' => "The role unique ID.",
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'permission' => array(
+        'description' => "The permission name.",
+        'type' => 'varchar',
+        'length' => 255,
+        
+        'not null' => TRUE
+        
+      ),
+      
+    ),
+    'primary key' => array('role_id', 'permission'),
+    
+  );
+  return $schema;
+}
+?>

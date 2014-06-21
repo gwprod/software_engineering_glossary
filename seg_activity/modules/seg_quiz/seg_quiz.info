@@ -1,0 +1,7 @@
+name = Software Engineering Glossary - Activity - Quiz
+description = "Quiz"
+package = "Software Engineering Glossary"
+dependencies[] = seg
+dependencies[] = seg_activity
+core = 7.x
+version = VERSION
